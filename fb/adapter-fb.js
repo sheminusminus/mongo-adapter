@@ -82,8 +82,8 @@ class FirebaseAdapter extends BaseKeystoneAdapter {
 
   getDefaultPrimaryKeyConfig() {
     // Required here due to circular refs
-    const { MongoId } = require('@keystonejs/fields-mongoid');
-    return MongoId.primaryKeyDefaults[this.name].getConfig();
+    const { FirebaseId } = require('./field-fbId');
+    return FirebaseId.primaryKeyDefaults[this.name].getConfig();
   }
 
   async checkDatabaseVersion() {
