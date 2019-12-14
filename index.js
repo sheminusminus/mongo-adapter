@@ -7,13 +7,14 @@ const { AdminUIApp } = require('@keystonejs/app-admin-ui');
 const initialiseData = require('./initial-data');
 
 const { MongooseAdapter: Adapter } = require('@keystonejs/adapter-mongoose');
+const { FirebaseAdapter } = require('./fb/adapter-fb');
 
 const PROJECT_NAME = "jubilee-dev";
 
 
 const keystone = new Keystone({
   name: PROJECT_NAME,
-  adapter: new Adapter(),
+  adapter: new FirebaseAdapter(),
   onConnect: initialiseData,
 });
 

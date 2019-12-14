@@ -30,6 +30,7 @@ class FirebaseAdapter extends BaseKeystoneAdapter {
       credential: admin.credential.cert(serviceAccount),
       databaseURL: 'https://jubilee-44a7d.firebaseio.com',
     });
+    console.log(admin);
     this.name = 'firebase';
     this.admin = admin;
     this.minVer = '4.0.0';
