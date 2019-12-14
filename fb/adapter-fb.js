@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
 const admin = require('firebase-admin');
 
+// jubilee-44a7d-firebase-adminsdk-j36ue-0b8db0390e
 const pSettle = require('p-settle');
 const {
   escapeRegExp,
@@ -21,58 +21,62 @@ const slugify = require('@sindresorhus/slugify');
 
 const debugMongoose = () => !!process.env.DEBUG_MONGOOSE;
 
-class MongooseAdapter extends BaseKeystoneAdapter {
+const serviceAccount = require('../jubilee-44a7d-firebase-adminsdk-j36ue-0b8db0390e.json');
+
+class FirebaseAdapter extends BaseKeystoneAdapter {
   constructor() {
     super(...arguments);
-    this.name = 'mongoose';
-    this.mongoose = new mongoose.Mongoose();
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      databaseURL: 'https://jubilee-44a7d.firebaseio.com',
+    });
+    this.name = 'firebase';
+    this.admin = admin;
     this.minVer = '4.0.0';
-    if (debugMongoose()) {
-      this.mongoose.set('debug', true);
-    }
     this.listAdapterClass = this.listAdapterClass || this.defaultListAdapterClass;
   }
 
   async _connect({ name }) {
-    const { mongoUri, ...mongooseConfig } = this.config;
-    // Default to the localhost instance
-    let uri =
-      mongoUri ||
-      process.env.CONNECT_TO ||
-      process.env.DATABASE_URL ||
-      process.env.MONGO_URI ||
-      process.env.MONGODB_URI ||
-      process.env.MONGO_URL ||
-      process.env.MONGODB_URL ||
-      process.env.MONGOLAB_URI ||
-      process.env.MONGOLAB_URL;
-
-    if (!uri) {
-      const defaultDbName = slugify(name) || 'keystone';
-      uri = `mongodb://localhost/${defaultDbName}`;
-      logger.warn(`No MongoDB connection URI specified. Defaulting to '${uri}'`);
-    }
-
-    await this.mongoose.connect(uri, {
-      useNewUrlParser: true,
-      useFindAndModify: false,
-      useUnifiedTopology: true,
-      ...mongooseConfig,
-    });
+    // const { mongoUri, ...mongooseConfig } = this.config;
+    // // Default to the localhost instance
+    // let uri =
+    //   mongoUri ||
+    //   process.env.CONNECT_TO ||
+    //   process.env.DATABASE_URL ||
+    //   process.env.MONGO_URI ||
+    //   process.env.MONGODB_URI ||
+    //   process.env.MONGO_URL ||
+    //   process.env.MONGODB_URL ||
+    //   process.env.MONGOLAB_URI ||
+    //   process.env.MONGOLAB_URL;
+    //
+    // if (!uri) {
+    //   const defaultDbName = slugify(name) || 'keystone';
+    //   uri = `mongodb://localhost/${defaultDbName}`;
+    //   logger.warn(`No MongoDB connection URI specified. Defaulting to '${uri}'`);
+    // }
+    //
+    // await this.mongoose.connect(uri, {
+    //   useNewUrlParser: true,
+    //   useFindAndModify: false,
+    //   useUnifiedTopology: true,
+    //   ...mongooseConfig,
+    // });
   }
+
   async postConnect() {
-    return await pSettle(
+    return pSettle(
       Object.values(this.listAdapters).map(listAdapter => listAdapter.postConnect())
     );
   }
 
   disconnect() {
-    return this.mongoose.disconnect();
+    // return this.mongoose.disconnect();
   }
 
   // This will completely drop the backing database. Use wisely.
   dropDatabase() {
-    return this.mongoose.connection.dropDatabase();
+    // return this.mongoose.connection.dropDatabase();
   }
 
   getDefaultPrimaryKeyConfig() {
@@ -82,19 +86,19 @@ class MongooseAdapter extends BaseKeystoneAdapter {
   }
 
   async checkDatabaseVersion() {
-    let info;
-
-    try {
-      info = await new this.mongoose.mongo.Admin(this.mongoose.connection.db).buildInfo();
-    } catch (error) {
-      console.log(`Error reading version from MongoDB: ${error}`);
-    }
-
-    if (!versionGreaterOrEqualTo(info.versionArray, this.minVer)) {
-      throw new Error(
-        `MongoDB version ${info.version} is incompatible. Version ${this.minVer} or later is required.`
-      );
-    }
+    // let info;
+    //
+    // try {
+    //   info = await new this.mongoose.mongo.Admin(this.mongoose.connection.db).buildInfo();
+    // } catch (error) {
+    //   console.log(`Error reading version from MongoDB: ${error}`);
+    // }
+    //
+    // if (!versionGreaterOrEqualTo(info.versionArray, this.minVer)) {
+    //   throw new Error(
+    //     `MongoDB version ${info.version} is incompatible. Version ${this.minVer} or later is required.`
+    //   );
+    // }
   }
 }
 
@@ -114,26 +118,26 @@ const DEFAULT_MODEL_SCHEMA_OPTIONS = {
   autoIndex: false,
 };
 
-class MongooseListAdapter extends BaseListAdapter {
+class FirebaseListAdapter extends BaseListAdapter {
   constructor(key, parentAdapter, config) {
     super(...arguments);
 
-    const { configureMongooseSchema, mongooseSchemaOptions } = config;
+    // const { configureMongooseSchema, mongooseSchemaOptions } = config;
 
     this.getListAdapterByKey = parentAdapter.getListAdapterByKey.bind(parentAdapter);
-    this.mongoose = parentAdapter.mongoose;
-    this.configureMongooseSchema = configureMongooseSchema;
-    this.schema = new parentAdapter.mongoose.Schema(
-      {},
-      { ...DEFAULT_MODEL_SCHEMA_OPTIONS, ...mongooseSchemaOptions }
-    );
+    this.admin = parentAdapter.admin;
+    // this.configureMongooseSchema = configureMongooseSchema;
+    // this.schema = new parentAdapter.mongoose.Schema(
+    //   {},
+    //   { ...DEFAULT_MODEL_SCHEMA_OPTIONS, ...mongooseSchemaOptions }
+    // );
 
     // Need to call postConnect() once all fields have registered and the database is connected to.
     this.model = null;
   }
 
   prepareFieldAdapter(fieldAdapter) {
-    fieldAdapter.addToMongooseSchema(this.schema, this.mongoose);
+    // fieldAdapter.addToMongooseSchema(this.schema, this.mongoose);
   }
 
   /**
@@ -144,17 +148,18 @@ class MongooseListAdapter extends BaseListAdapter {
    * @return Promise<>
    */
   async postConnect() {
-    if (this.configureMongooseSchema) {
-      this.configureMongooseSchema(this.schema, { mongoose: this.mongoose });
-    }
+    // if (this.configureMongooseSchema) {
+    //   this.configureMongooseSchema(this.schema, { mongoose: this.mongoose });
+    // }
 
     // 4th param is 'skipInit' which avoids calling `model.init()`.
     // We call model.init() later, after we have a connection up and running to
     // avoid issues with Mongoose's lazy queue and setting up the indexes.
-    this.model = this.mongoose.model(this.key, this.schema, null, true);
+    // this.model = this.mongoose.model(this.key, this.schema, null, true);
+    this.model = {};
 
     // Ensure we wait for any new indexes to be built
-    await this.model.init();
+    // await this.model.init();
     // Then ensure the indexes are all correct
     // The indexes can become out of sync if the database was modified
     // manually, or if the code has been updated. In both cases, the
@@ -172,25 +177,29 @@ class MongooseListAdapter extends BaseListAdapter {
     // http://thecodebarbarian.com/whats-new-in-mongoose-5-2-syncindexes
     // NOTE: If an index has changed and needs recreating, this can have a
     // performance impact when dealing with large datasets!
-    return this.model.syncIndexes();
+    // return this.model.syncIndexes();
+    return true;
   }
 
   _create(data) {
-    return this.model.create(data);
+    return data;
+    // return this.model.create(data);
   }
 
   _delete(id) {
-    return this.model.findByIdAndRemove(id);
+    return true;
+    // return this.model.findByIdAndRemove(id);
   }
 
   _update(id, data) {
+    return data;
     // Avoid any kind of injection attack by explicitly doing a `$set` operation
     // Return the modified item, not the original
-    return this.model.findByIdAndUpdate(
-      id,
-      { $set: data },
-      { new: true, runValidators: true, context: 'query' }
-    );
+    // return this.model.findByIdAndUpdate(
+    //   id,
+    //   { $set: data },
+    //   { new: true, runValidators: true, context: 'query' }
+    // );
   }
 
   graphQlQueryPathToMongoField(path) {
@@ -200,7 +209,8 @@ class MongooseListAdapter extends BaseListAdapter {
       throw new Error(`Unable to find Mongo field which maps to graphQL path ${path}`);
     }
 
-    return fieldAdapter.getMongoFieldName();
+    return fieldAdapter.getFirebaseFieldName();
+    // return fieldAdapter.getMongoFieldName();
   }
 
   async _itemsQuery(args, { meta = false, from, include } = {}) {
@@ -269,7 +279,7 @@ class MongooseListAdapter extends BaseListAdapter {
   }
 }
 
-class MongooseFieldAdapter extends BaseFieldAdapter {
+class FirebaseFieldAdapter extends BaseFieldAdapter {
   constructor() {
     super(...arguments);
 
@@ -390,10 +400,10 @@ class MongooseFieldAdapter extends BaseFieldAdapter {
   }
 }
 
-MongooseAdapter.defaultListAdapterClass = MongooseListAdapter;
+FirebaseAdapter.defaultListAdapterClass = FirebaseListAdapter;
 
 module.exports = {
-  MongooseAdapter,
-  MongooseListAdapter,
-  MongooseFieldAdapter,
+  FirebaseAdapter,
+  FirebaseListAdapter,
+  FirebaseFieldAdapter,
 };
