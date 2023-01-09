@@ -23,6 +23,6 @@
     "@keystonejs/fields": "^6.0.0",
     "@keystonejs/keystone": "^5.3.0",
     "cross-env": "^5.2.0",
-    "firebase-admin": "^8.8.0"
+    "firebase-admin": "^11.4.1"
   }
 }
